@@ -1,5 +1,8 @@
 {
     "CLOUDFLARE_API_KEY": "",
+    "CLOUDFLARE_ZONE_ID": "",
     "CLOUDFLARE_DOMAIN": "",
-    "CLOUDFLARE_ZONE_ID": ""
+    "CLOUDFLARE_CNAME": {
+        "*": true
+    }
 }
