@@ -33,12 +33,18 @@ class DDNS:
         self.current_ip = current_ip
         self.cname_list = self.config["CLOUDFLARE_CNAME"]
 
+        self.HEADERS = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.config['CLOUDFLARE_API_KEY']}",
+        }
+
     def load_config(self, config_path="/app/cloudflare-ddns/config/env.json"):
         config = {}
         required_keys = [
             "CLOUDFLARE_API_KEY",
             "CLOUDFLARE_DOMAIN",
             "CLOUDFLARE_ZONE_ID",
+            "CLOUDFLARE_CNAME",
         ]
 
         # 1. env.json 파일에서 설정 로드 (있는 경우)
@@ -107,22 +113,16 @@ class DDNS:
     def read_record(self, type=Literal["A", "CNAME"], name=None, content=None):
         try:
             url = f"https://api.cloudflare.com/client/v4/zones/{self.config['CLOUDFLARE_ZONE_ID']}/dns_records"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.config['CLOUDFLARE_API_KEY']}",
-            }
             params = {
                 "type": type,
                 "name": name,
                 "content": content,
             }
-            response = requests.get(url, headers=headers, params=params)
+            response = requests.get(url, headers=self.HEADERS, params=params)
             records = response.json()["result"]
             return records if records else None
         except Exception as e:
             logger.error(f"Error: {e}")
-            logger.warning("recommendation: check the environment variables")
-            # print(f"Error: {e}")
             return -1
 
     def create_record(
@@ -130,10 +130,6 @@ class DDNS:
     ):
         try:
             url = f"https://api.cloudflare.com/client/v4/zones/{self.config['CLOUDFLARE_ZONE_ID']}/dns_records"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.config['CLOUDFLARE_API_KEY']}",
-            }
             data = {
                 "type": type,
                 "name": name,
@@ -141,13 +137,11 @@ class DDNS:
                 "ttl": 1,
                 "proxied": proxy,
             }
-            response = requests.post(url, headers=headers, data=json.dumps(data))
+            response = requests.post(url, headers=self.HEADERS, data=json.dumps(data))
             success = response.json()["success"]
             return success if success else None
         except Exception as e:
             logger.error(f"Error: {e}")
-            logger.warning("recommendation: check the environment variables")
-            # print(f"Error: {e}")
             return -1
 
     def update_record(
@@ -155,10 +149,6 @@ class DDNS:
     ):
         try:
             url = f"https://api.cloudflare.com/client/v4/zones/{self.config['CLOUDFLARE_ZONE_ID']}/dns_records/{record_id}"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.config['CLOUDFLARE_API_KEY']}",
-            }
             data = {
                 "type": type,
                 "name": name,
@@ -166,29 +156,22 @@ class DDNS:
                 "ttl": 1,
                 "proxied": proxy,
             }
-            response = requests.put(url, headers=headers, data=json.dumps(data))
+            response = requests.put(url, headers=self.HEADERS, data=json.dumps(data))
             success = response.json()["success"]
             return success if success else None
         except Exception as e:
             logger.error(f"Error: {e}")
-            logger.warning("recommendation: check the environment variables")
-            # print(f"Error: {e}")
             return -1
 
     def delete_record(self, record_id):
         try:
             url = f"https://api.cloudflare.com/client/v4/zones/{self.config['CLOUDFLARE_ZONE_ID']}/dns_records/{record_id}"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.config['CLOUDFLARE_API_KEY']}",
-            }
-            response = requests.delete(url, headers=headers)
+
+            response = requests.delete(url, headers=self.HEADERS)
             success = response.json()["success"]
             return success if success else None
         except Exception as e:
             logger.error(f"Error: {e}")
-            logger.warning("recommendation: check the environment variables")
-            # print(f"Error: {e}")
             return -1
 
     def update_cname_list(self, cname_list, domain):
@@ -196,7 +179,7 @@ class DDNS:
             records_list = self.read_record(type="CNAME", content=domain)
             if records_list == -1:
                 logger.error("Failed to get DNS records")
-                return None
+                return -1
             elif not records_list:
                 for cname, proxy in cname_list.items():
                     result = self.create_record(
@@ -225,15 +208,18 @@ class DDNS:
                             type="CNAME", name=cname, content=domain, proxy=proxy
                         )
                         logger.info(f"{cname} is created")
+                        
                 for p in pre_list:
                     records = self.read_record(type="CNAME", name=p + "." + domain)
                     record_id = records[0]["id"]
                     result = self.delete_record(record_id)
                     logger.info(f"{p} is deleted")
+
+            if not result:
+                logger.error("Failed to update DNS CNAME record")
+                return -1
         except Exception as e:
             logger.error(f"Error: {e}")
-            logger.warning("recommendation: check the environment variables")
-            # print(f"Error: {e}")
             return -1
 
 
