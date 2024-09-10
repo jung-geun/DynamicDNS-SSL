@@ -2,6 +2,8 @@
 
 This project aims to implement a Dynamic DNS (DDNS) solution using Cloudflare's API. 
 
+[![Maintainability Rating](https://sonar.pieroot.xyz/api/project_badges/measure?project=pieroot_cloudflare-ddns_e6da100b-a671-4736-87ac-9a41acda99f6&metric=sqale_rating&token=sqb_f7f644f779ab4e442b5d5e431589f57bd3c64150)](https://sonar.pieroot.xyz/dashboard?id=pieroot_cloudflare-ddns_e6da100b-a671-4736-87ac-9a41acda99f6)
+
 ## Overview
 Dynamic DNS allows you to associate a domain name with a changing IP address, making it easier to access your network resources remotely. Cloudflare's API provides the necessary tools to automate this process.
 
