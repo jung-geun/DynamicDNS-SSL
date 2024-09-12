@@ -1,8 +1,10 @@
 #!/bin/bash
-if [ ! -f /app/cloudflare-ddns/config/env.json ]; then
-    cp /app/cloudflare-ddns/init/default_env.json /app/cloudflare-ddns/config/env.json
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+if [ ! -f $DIR/config/env.json ]; then
+    cp $DIR/init/default_env.json $DIR/config/env.json
 fi
 
-sh /app/cloudflare-ddns/run_script.sh
+sh $DIR/run_script.sh
 
 # tail -f /var/log/cloudflare_ddns.log

@@ -1,4 +1,5 @@
 IMAGE_NAME = "cloudflare-ddns"
+DIR = $(shell pwd)
 
 default: build
 
