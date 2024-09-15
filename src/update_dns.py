@@ -10,7 +10,7 @@ import requests
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 format = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d w%H:%M:%S"
 )
 logging.getLogger("requests").setLevel(logging.WARNING)
 fileHandler = logging.handlers.RotatingFileHandler(
@@ -39,12 +39,26 @@ class DDNS:
         }
 
     def load_config(self, config_path="/app/cloudflare-ddns/config/env.json"):
+        """
+        환경 변수와 env.json 파일에서 설정을 로드합니다.
+
+        Args:
+            config_path (str): 설정 파일 경로. Defaults to "/app/cloudflare-ddns/config/env.json".
+
+        Raises:
+            ValueError: 필수 설정이 없는 경우
+
+        Returns:
+            _type_: _description_
+        """
         config = {}
         required_keys = [
             "CLOUDFLARE_API_KEY",
             "CLOUDFLARE_DOMAIN",
             "CLOUDFLARE_ZONE_ID",
+            "CLOUDFLARE_A",
             "CLOUDFLARE_CNAME",
+            "CLOUDFLARE_MX",
         ]
 
         # 1. env.json 파일에서 설정 로드 (있는 경우)
@@ -61,12 +75,20 @@ class DDNS:
         missing_keys = [key for key in required_keys if key not in config]
         if missing_keys:
             raise ValueError(
-                f"Missing required configuration: {', '.join(missing_keys)}"
+                f"Missing required configuration: {', '.join(missing_keys)}",
+                "Please set the environment variables or create a config file.",
+                required_keys,
             )
 
         return config
 
     def get_config(self):
+        """
+        설정을 반환합니다.
+
+        Returns:
+            dict: 설정
+        """
         return self.config
 
     def get_ip(self):
@@ -103,6 +125,7 @@ class DDNS:
         try:
             with open("/tmp/external_ip.txt", "w") as file:
                 file.write(ip)
+            logger.info("IP is updated")
         except Exception as e:
             logger.error(f"Error: {e}")
             return None
@@ -117,12 +140,14 @@ class DDNS:
             }
             response = requests.get(url, headers=self.HEADERS, params=params).json()
             records = response["result"]
-            if not response["success"]:
-                raise Exception(f"Failed to get DNS records")
+            if response["success"] is False:
+                raise requests.exceptions.RequestException(
+                    f"Failed to get DNS records name : {content} | type : {type}"
+                )
             return records if records else None
         except Exception as e:
             logger.error(f"Error: {e}")
-            return -1
+            sys.exit(1)
 
     def create_record(
         self, type=Literal["A", "CNAME"], name=None, content=None, proxy=True
@@ -141,11 +166,11 @@ class DDNS:
             ).json()
             success = response["success"]
             if not success:
-                raise Exception(f"Failed to create {name}")
+                raise requests.exceptions.RequestException(f"Failed to create {name}")
             return success if success else None
         except Exception as e:
             logger.error(f"Error: {e}")
-            return -1
+            sys.exit(2)
 
     def update_record(
         self, record_id, type=Literal["A", "CNAME"], name=None, content=None, proxy=True
@@ -164,11 +189,11 @@ class DDNS:
             ).json()
             success = response["success"]
             if not success:
-                raise Exception(f"Failed to update {name}")
+                raise requests.exceptions.RequestException(f"Failed to update {name}")
             return success if success else None
         except Exception as e:
             logger.error(f"Error: {e}")
-            return -1
+            sys.exit(3)
 
     def delete_record(self, record_id):
         try:
@@ -176,125 +201,126 @@ class DDNS:
             response = requests.delete(url, headers=self.HEADERS).json()
             success = response["success"]
             if not success:
-                raise Exception(f"Failed to delete {record_id}")
+                raise requests.exceptions.RequestException(
+                    f"Failed to delete {record_id}"
+                )
             return success if success else None
         except Exception as e:
             logger.error(f"Error: {e}")
-            return -1
+            sys.exit(4)
+
+    def update_a_list(self, a_list, ips):
+        try:
+            records_list = self.read_record(type="A", content=ips)
+            if not records_list:
+                for a, proxy in a_list.items():
+                    self.create_record(type="A", name=a, content=ips, proxy=proxy)
+                    logger.info(f"{a} is created")
+            else:
+                pre_list = {}
+                for r in records_list:
+                    pre_list[r["name"]] = [r["proxied"], r["id"]]
+                for a, proxy in a_list.items():
+                    a = (
+                        a + "." + self.config["CLOUDFLARE_DOMAIN"]
+                        if a != "@"
+                        else self.config["CLOUDFLARE_DOMAIN"]
+                    )
+                    if a in pre_list.keys():
+                        if proxy != pre_list[a][0]:
+                            self.update_record(
+                                record_id=pre_list[a][1],
+                                type="A",
+                                name=a,
+                                content=ips,
+                                proxy=proxy,
+                            )
+                            logger.info(f"{a} is updated")
+                        pre_list.pop(a)
+                    else:
+                        print(a, ips, proxy)
+                        self.create_record(type="A", name=a, content=ips, proxy=proxy)
+                        logger.info(f"{a} is created")
+
+                for p in pre_list:
+                    records = self.read_record(type="A", name=p)
+                    record_id = records[0]["id"]
+                    self.delete_record(record_id)
+                    logger.info(f"{p} is deleted")
+
+            logger.info("A records are updated")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            sys.exit(5)
 
     def update_cname_list(self, cname_list, domain):
         try:
             records_list = self.read_record(type="CNAME", content=domain)
-            if records_list == -1:
-                logger.error("Failed to get DNS records")
-                return -1
-            elif not records_list:
+
+            if not records_list:
                 for cname, proxy in cname_list.items():
-                    result = self.create_record(
+                    self.create_record(
                         type="CNAME", name=cname, content=domain, proxy=proxy
                     )
-                    if not result:
-                        logger.error(f"Failed to create {cname}")
-                    else:
-                        logger.info(f"{cname} is created")
+                    logger.info(f"{cname} is created")
             else:
                 pre_list = {}
                 for r in records_list:
                     pre_list[r["name"].split(".")[0]] = [r["proxied"], r["id"]]
-                    
+
                 for cname, proxy in cname_list.items():
                     if cname in pre_list.keys():
                         if proxy != pre_list[cname][0]:
-                            result = self.update_record(
+                            self.update_record(
                                 record_id=pre_list[cname][1],
                                 type="CNAME",
                                 name=cname,
                                 content=domain,
                                 proxy=proxy,
                             )
-                            if result:
-                                logger.info(f"{cname} is updated")
-                            else:
-                                logger.error(f"Failed to update {cname}")
+                            logger.info(f"{cname} is updated")
                         pre_list.pop(cname)
 
                     else:
-                        result = self.create_record(
+                        self.create_record(
                             type="CNAME", name=cname, content=domain, proxy=proxy
                         )
-                        if not result:
-                            logger.error(f"Failed to create {cname}")
-                        else:
-                            logger.info(f"{cname} is created")
+                        logger.info(f"{cname} is created")
 
                 for p in pre_list:
                     records = self.read_record(type="CNAME", name=p + "." + domain)
                     record_id = records[0]["id"]
-                    result = self.delete_record(record_id)
-                    if not result:
-                        logger.error(f"Failed to delete {p}")
-                    else:
-                        logger.info(f"{p} is deleted")
+                    self.delete_record(record_id)
+                    logger.info(f"{p} is deleted")
 
+            logger.info("CNAME records are updated")
+            return True
         except Exception as e:
             logger.error(f"Error: {e}")
-            return -1
+            sys.exit(5)
 
 
 if __name__ == "__main__":
     API = DDNS()
     config = API.get_config()
-    flag = API.check_ip()
 
-    if flag:
-        logger.info("IP has changed")
+    # Check if the IP has changed
+    results = API.update_a_list(config["CLOUDFLARE_A"], API.current_ip)
 
-        a_records = API.read_record(type="A", name=config["CLOUDFLARE_DOMAIN"])
-
-        if a_records == -1:
-            logger.error("Failed to get DNS records")
-            sys.exit(0)
-        elif not a_records:
-            logger.info("No records found")
-            result = API.create_record(
-                type="A", name=config["CLOUDFLARE_DOMAIN"], content=API.current_ip
-            )
-            if not result:
-                logger.error("Failed to create DNS A record")
-                sys.exit(0)
-            API.update_ip(API.current_ip)
-        else:
-            ip_list = [API.get_ip(), API.previous_ip()]
-
-            for a_record in a_records:
-                if a_record["content"] in ip_list:
-                    logger.info(
-                        f"{a_record['type']} type | {a_record['name']} | {a_record['content']}"
-                    )
-
-                    record_id = a_record["id"]
-
-                    result = API.update_record(
-                        record_id=record_id,
-                        type="A",
-                        name=config["CLOUDFLARE_DOMAIN"],
-                        content=API.current_ip,
-                    )
-
-            API.update_ip(API.current_ip)
-
-        if not result:
-            logger.error("Failed to update DNS A record")
-            sys.exit(0)
-
+    if not results:
+        logger.error("Failed to update DNS A records")
+        sys.exit(1)
     else:
-        logger.info("IP has not changed")
+        API.update_ip(API.current_ip)
 
     # Update CNAME records
     result = API.update_cname_list(
         config["CLOUDFLARE_CNAME"], config["CLOUDFLARE_DOMAIN"]
     )
-    if result == -1:
+    if not result:
         logger.error("Failed to update CNAME records")
+        sys.exit(1)
 
     sys.exit(0)
