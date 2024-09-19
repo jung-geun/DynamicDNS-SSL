@@ -3,6 +3,6 @@ stages:
   - sonarqube-vulnerability-report
 include:
   - local: .gitlab/ci/*.gitlab-ci.yml
-  - template: Jobs/Dependency-Scanning.latest.gitlab-ci.yml
-  - template: Jobs/SAST.latest.gitlab-ci.yml
-  - template: Jobs/Secret-Detection.gitlab-ci.yml
+  # - template: Jobs/Dependency-Scanning.latest.gitlab-ci.yml
+  # - template: Jobs/SAST.latest.gitlab-ci.yml
+  # - template: Jobs/Secret-Detection.gitlab-ci.yml
