@@ -80,6 +80,8 @@ class DDNS:
                 required_keys,
             )
 
+        self.domain = config["CLOUDFLARE_DOMAIN"]
+
         return config
 
     def get_config(self):
@@ -258,9 +260,16 @@ class DDNS:
     def update_cname_list(self, cname_list, domain):
         try:
             records_list = self.read_record(type="CNAME", content=domain)
+            tmp_cname_list = []
+            for cname in cname_list.keys():
+                a_record = list(cname_list[cname].keys())[0]
+                a_record = a_record if a_record != "@" else self.domain.split(".")[0]
+                proxy = list(cname_list[cname].values())[0]
+                if a_record == domain.split(".")[0]:
+                    tmp_cname_list.append([cname, proxy])
 
             if not records_list:
-                for cname, proxy in cname_list.items():
+                for [cname, proxy] in tmp_cname_list:
                     self.create_record(
                         type="CNAME", name=cname, content=domain, proxy=proxy
                     )
@@ -270,7 +279,7 @@ class DDNS:
                 for r in records_list:
                     pre_list[r["name"].split(".")[0]] = [r["proxied"], r["id"]]
 
-                for cname, proxy in cname_list.items():
+                for [cname, proxy] in tmp_cname_list:
                     if cname in pre_list.keys():
                         if proxy != pre_list[cname][0]:
                             self.update_record(
@@ -316,9 +325,13 @@ if __name__ == "__main__":
         API.update_ip(API.current_ip)
 
     # Update CNAME records
-    result = API.update_cname_list(
-        config["CLOUDFLARE_CNAME"], config["CLOUDFLARE_DOMAIN"]
-    )
+    for a in config["CLOUDFLARE_A"]:
+        domain = (
+            a + "." + config["CLOUDFLARE_DOMAIN"]
+            if a != "@"
+            else config["CLOUDFLARE_DOMAIN"]
+        )
+        result = API.update_cname_list(config["CLOUDFLARE_CNAME"], domain)
     if not result:
         logger.error("Failed to update CNAME records")
         sys.exit(1)

@@ -6,7 +6,9 @@
         "@": true
     },
     "CLOUDFLARE_CNAME": {
-        "*": true
+        "*": {
+            "@": true
+        }
     },
     "CLOUDFLARE_MX": {}
 }
