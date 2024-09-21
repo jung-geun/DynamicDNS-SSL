@@ -7,4 +7,4 @@ export CLOUDFLARE_ZONE_ID=$ZONE_ID
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Run the script
-python3 $DIR/src/update_dns.py $@
+python3 $DIR/../src/update_dns.py $@

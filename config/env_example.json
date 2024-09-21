@@ -1,0 +1,15 @@
+{
+    "CLOUDFLARE_API_KEY": "your_cloudflare_api_key",
+    "CLOUDFLARE_ZONE_ID": "your_cloudflare_zone_id",
+    "CLOUDFLARE_DOMAIN": "example.com",
+    "EMAIL": "your_email@example.com",
+    "CLOUDFLARE_A": {
+        "@": true
+    },
+    "CLOUDFLARE_CNAME": {
+        "@": {
+            "www": true
+        }
+    },
+    "CLOUDFLARE_MX": {}
+}

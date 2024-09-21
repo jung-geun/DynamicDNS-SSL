@@ -21,9 +21,11 @@ fileHandler.setFormatter(format)
 logger.addHandler(fileHandler)
 logger.addHandler(logging.StreamHandler())
 
+DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "../config/env.json")
+
 
 class DDNS:
-    def __init__(self, config_path="/app/cloudflare-ddns/config/env.json"):
+    def __init__(self, config_path=DEFAULT_CONFIG_PATH):
         self.config = self.load_config(config_path)
         current_ip = self.get_ip()
         previous_ip = self.previous_ip()
@@ -38,12 +40,12 @@ class DDNS:
             "Authorization": f"Bearer {self.config['CLOUDFLARE_API_KEY']}",
         }
 
-    def load_config(self, config_path="/app/cloudflare-ddns/config/env.json"):
-        """
+    def load_config(self, config_path=DEFAULT_CONFIG_PATH):
+        f"""
         환경 변수와 env.json 파일에서 설정을 로드합니다.
 
         Args:
-            config_path (str): 설정 파일 경로. Defaults to "/app/cloudflare-ddns/config/env.json".
+            config_path (str): 설정 파일 경로. Defaults to {DEFAULT_CONFIG_PATH}.
 
         Raises:
             ValueError: 필수 설정이 없는 경우
@@ -129,7 +131,7 @@ class DDNS:
                 file.write(ip)
             logger.info("IP is updated")
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"UPDATE IP Error: {e}")
             return None
 
     def read_record(self, type=Literal["A", "CNAME"], name=None, content=None):
@@ -148,7 +150,7 @@ class DDNS:
                 )
             return records if records else None
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"READ RECORD Error: {e}")
             sys.exit(1)
 
     def create_record(
@@ -171,7 +173,7 @@ class DDNS:
                 raise requests.exceptions.RequestException(f"Failed to create {name}")
             return success if success else None
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"CREATE RECORD Error: {e}")
             sys.exit(2)
 
     def update_record(
@@ -194,7 +196,7 @@ class DDNS:
                 raise requests.exceptions.RequestException(f"Failed to update {name}")
             return success if success else None
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"UPDATE RECORD Error: {e}")
             sys.exit(3)
 
     def delete_record(self, record_id):
@@ -208,7 +210,7 @@ class DDNS:
                 )
             return success if success else None
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"DELETE RECORD Error: {e}")
             sys.exit(4)
 
     def update_a_list(self, a_list, ips):
@@ -240,7 +242,6 @@ class DDNS:
                             logger.info(f"{a} is updated")
                         pre_list.pop(a)
                     else:
-                        print(a, ips, proxy)
                         self.create_record(type="A", name=a, content=ips, proxy=proxy)
                         logger.info(f"{a} is created")
 
@@ -254,60 +255,64 @@ class DDNS:
             return True
 
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"A RECORDS UPDATE Error: {e}")
             sys.exit(5)
 
-    def update_cname_list(self, cname_list, domain):
+    def update_cname_list(self, cname_list):
         try:
-            records_list = self.read_record(type="CNAME", content=domain)
-            tmp_cname_list = []
-            for cname in cname_list.keys():
-                a_record = list(cname_list[cname].keys())[0]
-                a_record = a_record if a_record != "@" else self.domain.split(".")[0]
-                proxy = list(cname_list[cname].values())[0]
-                if a_record == domain.split(".")[0]:
-                    tmp_cname_list.append([cname, proxy])
+            for a_record in cname_list.keys():
+                domain = (
+                    a_record + "." + self.domain if a_record != "@" else self.domain
+                )
 
-            if not records_list:
-                for [cname, proxy] in tmp_cname_list:
-                    self.create_record(
-                        type="CNAME", name=cname, content=domain, proxy=proxy
-                    )
-                    logger.info(f"{cname} is created")
-            else:
-                pre_list = {}
-                for r in records_list:
-                    pre_list[r["name"].split(".")[0]] = [r["proxied"], r["id"]]
+                records_list = self.read_record(type="CNAME", content=domain)
+                tmp_cname_list = cname_list[a_record]
 
-                for [cname, proxy] in tmp_cname_list:
-                    if cname in pre_list.keys():
-                        if proxy != pre_list[cname][0]:
-                            self.update_record(
-                                record_id=pre_list[cname][1],
-                                type="CNAME",
-                                name=cname,
-                                content=domain,
-                                proxy=proxy,
-                            )
-                            logger.info(f"{cname} is updated")
-                        pre_list.pop(cname)
-
-                    else:
+                if not records_list:
+                    for cname, proxy in tmp_cname_list.items():
                         self.create_record(
                             type="CNAME", name=cname, content=domain, proxy=proxy
                         )
                         logger.info(f"{cname} is created")
+                else:
+                    pre_list = {}
+                    for record in records_list:
+                        pre_list[record["name"].split(".")[0]] = [
+                            record["proxied"],
+                            record["id"],
+                        ]
 
-                for p in pre_list:
-                    records = self.read_record(type="CNAME", name=p + "." + domain)
-                    record_id = records[0]["id"]
-                    self.delete_record(record_id)
-                    logger.info(f"{p} is deleted")
+                    for cname, proxy in tmp_cname_list.items():
+                        if cname in pre_list.keys():
+                            if proxy != pre_list[cname][0]:
+                                self.update_record(
+                                    record_id=pre_list[cname][1],
+                                    type="CNAME",
+                                    name=cname,
+                                    content=domain,
+                                    proxy=proxy,
+                                )
+                                logger.info(f"{cname} is updated")
+                            pre_list.pop(cname)
+
+                        else:
+                            self.create_record(
+                                type="CNAME", name=cname, content=domain, proxy=proxy
+                            )
+                            logger.info(f"{cname} is created")
+
+                    for p in pre_list:
+                        record = self.read_record(
+                            type="CNAME", name=p + "." + self.domain
+                        )
+                        record_id = record[0]["id"]
+                        self.delete_record(record_id)
+                        logger.info(f"{p} is deleted")
 
             logger.info("CNAME records are updated")
             return True
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"CNAME RECORDS UPDATE Error: {e}")
             sys.exit(5)
 
 
@@ -325,13 +330,7 @@ if __name__ == "__main__":
         API.update_ip(API.current_ip)
 
     # Update CNAME records
-    for a in config["CLOUDFLARE_A"]:
-        domain = (
-            a + "." + config["CLOUDFLARE_DOMAIN"]
-            if a != "@"
-            else config["CLOUDFLARE_DOMAIN"]
-        )
-        result = API.update_cname_list(config["CLOUDFLARE_CNAME"], domain)
+    result = API.update_cname_list(config["CLOUDFLARE_CNAME"])
     if not result:
         logger.error("Failed to update CNAME records")
         sys.exit(1)

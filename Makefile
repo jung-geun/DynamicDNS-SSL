@@ -1,5 +1,5 @@
 IMAGE_NAME = "cloudflare-ddns"
-DIR = $(shell pwd)
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 default: build
 
@@ -23,26 +23,19 @@ stop:
 
 .PHONY: install
 install:
-	@echo "Installing cloudflare-ddns to '/app/cloudflare-ddns'"
-	@mkdir -p /app/cloudflare-ddns
-	@cp -r ./* /app/cloudflare-ddns
-	@if [ ! -f /app/cloudflare-ddns/config/env.json ]; then \
-		echo "Creating default env.json"; \
-		mkdir -p /app/cloudflare-ddns/config; \
-    	cp /app/cloudflare-ddns/init/default_env.json /app/cloudflare-ddns/config/env.json; \
-		echo "Please edit /app/cloudflare-ddns/config/env.json"; \
-	fi
-	@cp /app/cloudflare-ddns/cron/cronjob /etc/cron.d/cloudflare-ddns
-	@touch /var/log/cloudflare_ddns.log
-	@chmod +x /app/cloudflare-ddns/run_script.sh
-	@chmod +x /app/cloudflare-ddns/start.sh
-	
-	@echo "Enter 'make configure' to configure the Cloudflare API key, domain and ZONE ID"
+	@echo "Installing cloudflare-ddns"
+	@scripts/install.sh
 
-	@echo "Done"
+.PHONY: certbot
+certbot:
+	@echo "Installing certbot"
+	@scripts/certbot.sh
 
-.PHONY: configure
-configure:
-	@echo "Please edit /app/cloudflare-ddns/config/env.json"
-	@vi /app/cloudflare-ddns/config/env.json
+.PHONY: clean
+clean:
+	@rm -rf /app/cloudflare-ddns
+	@rm -rf /app/certbot
+	@rm /etc/cron.d/cloudflare-ddns
+	@rm /var/log/cloudflare_ddns.log
+	@rm /var/log/cloudflare_ddns.log.*
 	@echo "Done"

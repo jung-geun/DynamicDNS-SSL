@@ -1,0 +1,1 @@
+0 0,12 * * * /usr/bin/certbot renew --dns-cloudflare --dns-cloudflare-credentials /etc/letsencrypt/cloudflare.ini --quiet

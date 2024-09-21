@@ -1,24 +1,27 @@
 FROM python:3.9-slim
 
-# Install required packages
-RUN apt-get update && apt-get install -y \
-    cron \
-    make \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN mkdir -p /app/cloudflare-ddns/
 WORKDIR /app/cloudflare-ddns
 RUN mkdir -p /app/cloudflare-ddns/config
 
-COPY . .
+COPY requirements.txt /app/cloudflare-ddns/
 
-RUN pip install --no-cache-dir -r requirements.txt
+COPY ./etc /app/cloudflare-ddns/
+COPY ./src /app/cloudflare-ddns/
+COPY ./*.sh /app/cloudflare-ddns/
 
-RUN cp /app/cloudflare-ddns/cron/cronjob /etc/cron.d/cloudflare-ddns
-
-RUN touch /var/log/cron.log
-RUN chmod +x /app/cloudflare-ddns/start.sh
-RUN chmod +x /app/cloudflare-ddns/run_script.sh
+# Install required packages
+RUN apt-get update && apt-get --no-install-recommends install -y \
+    cron \
+    libaugeas0 \
+    make \
+    python3.11 python3.11-dev python3.11-pip python3.11-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    cp /app/cloudflare-ddns/cron/cronjob-ddns /etc/cron.d/cloudflare-ddns \
+    pip install --no-cache-dir -r requirements.txt \
+    touch /var/log/cron.log \
+    chmod +x /app/cloudflare-ddns/start.sh \
+    chmod +x /app/cloudflare-ddns/run_script.sh
 
 VOLUME [ "/app/cloudflare-ddns/config" ]
 
