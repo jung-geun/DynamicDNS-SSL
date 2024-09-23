@@ -1,1 +1,1 @@
-*/30 * * * * root /app/cloudflare-ddns/run_script.sh
+*/30 * * * * root /app/cloudflare-ddns/scripts/run_script.sh
