@@ -22,6 +22,8 @@ logger.addHandler(fileHandler)
 logger.addHandler(logging.StreamHandler())
 
 DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "../config/env.json")
+PWD = os.path.dirname(os.path.abspath(__file__))
+TMP_PATH = os.path.join(PWD, "tmp")
 
 
 class DDNS:
@@ -34,6 +36,7 @@ class DDNS:
         logger.info(f"Previous IP: {previous_ip}")
         self.current_ip = current_ip
         self.cname_list = self.config["CLOUDFLARE_CNAME"]
+        self.external_ip_path = os.path.join(TMP_PATH, "external_ip.txt")
 
         self.HEADERS = {
             "Content-Type": "application/json",
@@ -105,11 +108,11 @@ class DDNS:
 
     def previous_ip(self):
         try:
-            if os.path.exists("/tmp/external_ip.txt"):
-                with open("/tmp/external_ip.txt", "r") as file:
+            if os.path.exists(self.external_ip_path):
+                with open(self.external_ip_path, "r") as file:
                     return file.read()
             else:
-                os.mknod("/tmp/external_ip.txt")
+                os.mknod(self.external_ip_path)
         except Exception as e:
             logger.error(f"Error: {e}")
             return None
@@ -127,7 +130,7 @@ class DDNS:
 
     def update_ip(self, ip):
         try:
-            with open("/tmp/external_ip.txt", "w") as file:
+            with open(self.external_ip_path, "w") as file:
                 file.write(ip)
             logger.info("IP is updated")
         except Exception as e:

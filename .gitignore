@@ -1,5 +1,5 @@
-# Created by https://www.toptal.com/developers/gitignore/api/python,visualstudiocode
-# Edit at https://www.toptal.com/developers/gitignore?templates=python,visualstudiocode
+# Created by https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,sonarqube
+# Edit at https://www.toptal.com/developers/gitignore?templates=python,visualstudiocode,sonarqube
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
@@ -173,6 +173,19 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
+### SonarQube ###
+# SonarQube ignore files.
+#
+# https://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner
+# Sonar Scanner working directories
+.sonar/
+.sonarqube/
+.scannerwork/
+
+# http://www.sonarlint.org/commandline/
+# SonarLint working directories, configuration files (including credentials)
+.sonarlint/
+
 ### VisualStudioCode ###
 .vscode/
 
@@ -187,4 +200,4 @@ pyrightconfig.json
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode
+# End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,sonarqube
