@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 RUN mkdir -p /app/cloudflare-ddns/
 WORKDIR /app/cloudflare-ddns
@@ -15,7 +15,6 @@ RUN apt-get update && apt-get --no-install-recommends install -y \
     cron \
     libaugeas0 \
     make \
-    python3.11 python3.11-dev python3.11-pip python3.11-venv \
     && rm -rf /var/lib/apt/lists/* \
     cp /app/cloudflare-ddns/cron/cronjob-ddns /etc/cron.d/cloudflare-ddns \
     pip install --no-cache-dir -r requirements.txt \

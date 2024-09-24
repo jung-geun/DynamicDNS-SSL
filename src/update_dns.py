@@ -23,12 +23,13 @@ logger.addHandler(logging.StreamHandler())
 
 DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "../config/env.json")
 PWD = os.path.dirname(os.path.abspath(__file__))
-TMP_PATH = os.path.join(PWD, "tmp")
+TMP_PATH = os.path.join(PWD, "../tmp")
 
 
 class DDNS:
     def __init__(self, config_path=DEFAULT_CONFIG_PATH):
         self.config = self.load_config(config_path)
+        self.external_ip_path = os.path.join(TMP_PATH, "external_ip")
         current_ip = self.get_ip()
         previous_ip = self.previous_ip()
 
@@ -36,7 +37,6 @@ class DDNS:
         logger.info(f"Previous IP: {previous_ip}")
         self.current_ip = current_ip
         self.cname_list = self.config["CLOUDFLARE_CNAME"]
-        self.external_ip_path = os.path.join(TMP_PATH, "external_ip.txt")
 
         self.HEADERS = {
             "Content-Type": "application/json",

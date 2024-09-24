@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # Certbot 및 Cloudflare API 도구 설치
-sudo apt update
-sudo apt install -y certbot python3-certbot-dns-cloudflare jq
 
 # 필요한 변수 설정
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
