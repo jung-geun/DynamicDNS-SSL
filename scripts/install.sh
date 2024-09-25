@@ -40,4 +40,6 @@ fi
 sudo cp $DIR/../cron/cronjob-ddns /etc/cron.d/cloudflare-ddns
 echo -e "Please modify the environment configuration file and save it in the /app/cloudflare-ddns/config/env.json path. \n"
 
+sudo vi /app/cloudflare-ddns/config/env.json
+
 echo -e "Certbot and Cloudflare API tools installation completed. \n"

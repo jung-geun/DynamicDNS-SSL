@@ -1,44 +1,83 @@
-# Cloudflare DDNS Project
+# DynamicDNS-SSL
 
-This project aims to implement a Dynamic DNS (DDNS) solution using Cloudflare's API. 
+**DynamicDNS-SSL**는 Cloudflare를 통해 동적 DNS 업데이트(DDNS)를 자동으로 수행하고, Certbot을 이용해 SSL 인증서를 자동으로 갱신하는 스크립트입니다. 이 프로젝트는 도메인 소유자가 IP 주소가 변경될 때마다 수동으로 업데이트할 필요 없이, 자동으로 DNS와 SSL 인증서를 관리할 수 있도록 도와줍니다.
+
+동적 IP를 사용하는 개인 사용자나 작은 규모의 서버 운영자들에게 유용한 프로젝트입니다.
 
 [![Quality Gate Status](https://sonar.pieroot.xyz/api/project_badges/measure?project=jung-geun_cloudflare-ddns_AZIjf9NeRMPvGKjJzls4&metric=alert_status&token=sqb_706e3b82fdb379ee29accac27f1bd19726dcb31c)](https://sonar.pieroot.xyz/dashboard?id=jung-geun_cloudflare-ddns_AZIjf9NeRMPvGKjJzls4)
 [![Security Hotspots](https://sonar.pieroot.xyz/api/project_badges/measure?project=jung-geun_cloudflare-ddns_AZIjf9NeRMPvGKjJzls4&metric=security_hotspots&token=sqb_706e3b82fdb379ee29accac27f1bd19726dcb31c)](https://sonar.pieroot.xyz/dashboard?id=jung-geun_cloudflare-ddns_AZIjf9NeRMPvGKjJzls4)
 [![Bugs](https://sonar.pieroot.xyz/api/project_badges/measure?project=jung-geun_cloudflare-ddns_AZIjf9NeRMPvGKjJzls4&metric=bugs&token=sqb_706e3b82fdb379ee29accac27f1bd19726dcb31c)](https://sonar.pieroot.xyz/dashboard?id=jung-geun_cloudflare-ddns_AZIjf9NeRMPvGKjJzls4)
 
-## Overview
-Dynamic DNS allows you to associate a domain name with a changing IP address, making it easier to access your network resources remotely. Cloudflare's API provides the necessary tools to automate this process.
+## 주요 기능
 
-## Prerequisites
-Before getting started, make sure you have the following:
+- **자동 DNS 업데이트**: Cloudflare API를 사용하여 IP 주소가 변경될 때마다 자동으로 DNS 레코드를 업데이트합니다.
+- **SSL 인증서 자동 갱신**: Certbot을 사용하여 SSL 인증서를 자동으로 발급 및 갱신합니다.
+- **환경 설정 파일 사용**: JSON 형식의 설정 파일을 통해 쉽게 설정을 변경할 수 있습니다.
 
-- A Cloudflare account
-- A registered domain name
-- API credentials from Cloudflare
+## 요구 사항
 
-## Installation
-To install and set up the project, follow these steps:
+시작하기 전에 다음 사항을 준비해야 합니다:
 
-1. Clone the repository: `git clone https://github.com/jung-geun/cloudflare-ddns.git`
-2. Deploy the project to a server or cloud platform: 
-    - You can deploy the project to a server or cloud platform of your choice. 
-    - Make sure to install the necessary dependencies by running 'make install'
-3. Configure the project:
-    - Create a configuration file named `config.json` in the initial 
-    'make configure' will create a configuration file with default settings.
-    - Add your Cloudflare API credentials and domain information to the configuration file.
+- Cloudflare 계정
+- 등록된 도메인 이름
+- Cloudflare API 자격 증명
+
+## 설치
+
+### 1. **프로젝트 클론**
+
+```bash
+git clone https://github.com/jung-geun/cloudflare-ddns.git
+
+<!-- or -->
+
+git clone https://git.pieroot.xyz/jung-geun/cloudflare-ddns.git
 
 
-## Usage
-Once the project is up and running, it will periodically check for IP address changes and update the DNS records accordingly. You can customize the update frequency and other settings in the configuration file.
+cd cloudflare-ddns
+```
 
-## Contributing
-Contributions are welcome! If you have any suggestions or improvements, feel free to open an issue or submit a pull request.
+### 2. **필요한 패키지 설치**
 
-## License
-This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for more details.
+```bash
+sudo apt update
+sudo apt install -y certbot python3-certbot-dns-cloudflare jq
+
+<!-- or -->
+
+make install # makefile을 이용해 패키지를 설치할 수 있습니다.
+```
+
+### 3. **환경 설정 파일 생성**
+
+```bash
+vi /app/cloudflare-ddns/config/env.json
+```
+
+아래와 같이 환경 설정 파일을 작성합니다:
+
+```json
+{
+    "CLOUDFLARE_API_KEY": "your_cloudflare_api_key",
+    "CLOUDFLARE_ZONE_ID": "your_cloudflare_zone_id",
+    "CLOUDFLARE_DOMAIN": "example.com",
+    "EMAIL": "your_email@example.com",
+    "CLOUDFLARE_A": {
+        "@": true
+    },
+    "CLOUDFLARE_CNAME": {
+        "@": {
+            "www": true
+        }
+    },
+    "CLOUDFLARE_MX": {}
+}
+```
+
 ## 기여하기
+
 기여는 환영합니다! 제안이나 개선 사항이 있으시면 이슈를 열거나 풀 리퀘스트를 제출해 주세요.
 
 ## 라이선스
+
 이 프로젝트는 MIT 라이선스로 배포됩니다. 자세한 내용은 [LICENSE](./LICENSE) 파일을 참조하세요.
