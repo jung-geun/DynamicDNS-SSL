@@ -3,7 +3,7 @@ import logging
 import logging.handlers
 import os
 import sys
-from typing import Literal, Optional
+from typing import Literal
 
 import requests
 
@@ -259,6 +259,7 @@ class DDNS:
 
         except Exception as e:
             logger.error(f"A RECORDS UPDATE Error: {e}")
+            logger.error("Failed to update A records")
             sys.exit(5)
 
     def update_cname_list(self, cname_list):
@@ -316,26 +317,5 @@ class DDNS:
             return True
         except Exception as e:
             logger.error(f"CNAME RECORDS UPDATE Error: {e}")
+            logger.error("Failed to update CNAME records")
             sys.exit(5)
-
-
-if __name__ == "__main__":
-    API = DDNS()
-    config = API.get_config()
-
-    # Check if the IP has changed
-    results = API.update_a_list(config["CLOUDFLARE_A"], API.current_ip)
-
-    if not results:
-        logger.error("Failed to update DNS A records")
-        sys.exit(1)
-    else:
-        API.update_ip(API.current_ip)
-
-    # Update CNAME records
-    result = API.update_cname_list(config["CLOUDFLARE_CNAME"])
-    if not result:
-        logger.error("Failed to update CNAME records")
-        sys.exit(1)
-
-    sys.exit(0)
